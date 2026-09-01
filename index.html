@@ -1,469 +1,170 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="theme-color" content="#0B0B0D">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="La Forge">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<title>La Forge</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0B0B0D;
-    --bg-elev:#151517;
-    --bg-card:#1A1A1D;
-    --line:#2A2A2E;
-    --ember:#FF5A1F;
-    --ember-dim:#8A3016;
-    --ember-glow:rgba(255,90,31,0.35);
-    --steel:#7C7E85;
-    --steel-light:#B8BABE;
-    --text:#F2F0EA;
-    --ok:#5FA876;
-    --warn:#E0B23E;
-    --radius:14px;
-  }
-  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;}
-  body{
-    margin:0;
-    background:
-      radial-gradient(ellipse 600px 400px at 50% -10%, rgba(255,90,31,0.08), transparent),
-      var(--bg);
-    color:var(--text);
-    font-family:'Inter',system-ui,sans-serif;
-    padding-bottom:env(safe-area-inset-bottom);
-    overscroll-behavior-y:none;
-  }
-  h1,h2,h3,.display{font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:0.04em;}
-  .mono{font-family:'JetBrains Mono',monospace;}
-  header{
-    padding:22px 20px 14px;
-    display:flex; align-items:center; justify-content:space-between;
-    border-bottom:1px solid var(--line);
-    position:sticky; top:0; background:rgba(11,11,13,0.9); backdrop-filter:blur(10px); z-index:20;
-  }
-  .brand{display:flex; align-items:center; gap:10px;}
-  .brand-mark{
-    width:30px;height:30px;border-radius:6px;
-    background:linear-gradient(160deg,var(--ember),var(--ember-dim));
-    box-shadow:0 0 18px var(--ember-glow);
-    display:flex;align-items:center;justify-content:center;
-    font-family:'Oswald'; font-weight:700; font-size:15px; color:#0B0B0D;
-  }
-  .brand h1{font-size:19px; margin:0; font-weight:600;}
-  .streak{font-size:12px; color:var(--steel-light); display:flex; align-items:center; gap:5px;}
-  .streak b{color:var(--ember); font-family:'JetBrains Mono'; font-weight:700;}
-
-  main{max-width:640px; margin:0 auto; padding:18px 16px 100px;}
-
-  /* Forge gauge */
-  .gauge-card{
-    background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius);
-    padding:18px; margin-bottom:18px;
-  }
-  .gauge-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;}
-  .gauge-label{font-size:11px; color:var(--steel); text-transform:uppercase; letter-spacing:0.08em;}
-  .gauge-value{font-family:'JetBrains Mono'; font-weight:700; font-size:13px; color:var(--ember);}
-  .gauge-track{height:10px; background:#0E0E10; border-radius:6px; overflow:hidden; border:1px solid var(--line); position:relative;}
-  .gauge-fill{
-    height:100%;
-    background:linear-gradient(90deg,var(--ember-dim),var(--ember));
-    box-shadow:0 0 12px var(--ember-glow);
-    border-radius:6px;
-    transition:width .5s ease;
-  }
-  .gauge-sub{margin-top:8px; font-size:12px; color:var(--steel);}
-
-  /* Day tabs */
-  .tabs{display:flex; gap:6px; margin-bottom:16px; overflow-x:auto; padding-bottom:2px;}
-  .tab{
-    flex:0 0 auto; padding:9px 14px; border-radius:20px; border:1px solid var(--line);
-    background:var(--bg-elev); color:var(--steel-light); font-size:13px; font-weight:600;
-    cursor:pointer; white-space:nowrap; transition:all .15s;
-  }
-  .tab.active{background:var(--ember); border-color:var(--ember); color:#0B0B0D;}
-
-  .day-title{font-size:13px; color:var(--steel); margin:4px 2px 12px; text-transform:uppercase; letter-spacing:0.06em;}
-
-  /* Exercise card */
-  .exercise{
-    background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius);
-    padding:14px 16px; margin-bottom:10px;
-  }
-  .ex-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
-  .ex-name{font-size:15px; font-weight:600;}
-  .ex-tag{font-size:10px; color:var(--steel); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;}
-  .ex-target{font-family:'JetBrains Mono'; font-size:12px; color:var(--steel-light);}
-  .sets{display:flex; gap:8px; flex-wrap:wrap;}
-  .set-btn{
-    width:46px; height:46px; border-radius:10px; border:1px solid var(--line);
-    background:var(--bg-elev); color:var(--steel-light); font-family:'JetBrains Mono'; font-weight:700; font-size:14px;
-    display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s;
-  }
-  .set-btn.done{
-    background:linear-gradient(160deg,var(--ember),var(--ember-dim));
-    border-color:var(--ember); color:#0B0B0D;
-    box-shadow:0 0 14px var(--ember-glow);
-  }
-  .set-input{
-    width:46px; height:46px; border-radius:10px; border:1px solid var(--line);
-    background:var(--bg-elev); color:var(--text); font-family:'JetBrains Mono'; font-weight:700; font-size:13px;
-    text-align:center;
-  }
-  .weighted{font-size:11px; color:var(--warn); margin-top:8px;}
-
-  section.block{margin-top:24px;}
-  .block-title{font-size:14px; color:var(--steel-light); margin-bottom:10px; display:flex; align-items:center; gap:8px;}
-  .block-title .line{flex:1; height:1px; background:var(--line);}
-
-  .log-item{
-    display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px;
-  }
-  .log-item:last-child{border-bottom:none;}
-  .log-date{color:var(--steel);}
-  .log-ver{font-family:'JetBrains Mono'; color:var(--ember); font-size:11px;}
-
-  .empty{color:var(--steel); font-size:13px; text-align:center; padding:24px 0;}
-
-  footer.tabbar{
-    position:fixed; bottom:0; left:0; right:0;
-    background:rgba(20,20,22,0.92); backdrop-filter:blur(14px);
-    border-top:1px solid var(--line);
-    display:flex; padding:8px 12px calc(8px + env(safe-area-inset-bottom));
-    z-index:20;
-  }
-  .nav-btn{
-    flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;
-    background:none; border:none; color:var(--steel); font-family:'Inter'; font-size:10px;
-    padding:6px 0; cursor:pointer; text-transform:uppercase; letter-spacing:0.04em;
-  }
-  .nav-btn.active{color:var(--ember);}
-  .nav-dot{width:5px;height:5px;border-radius:50%;background:transparent;}
-  .nav-btn.active .nav-dot{background:var(--ember); box-shadow:0 0 6px var(--ember-glow);}
-
-  .view{display:none;}
-  .view.active{display:block;}
-
-  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;}
-  .stat{background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius); padding:14px;}
-  .stat-num{font-family:'JetBrains Mono'; font-weight:700; font-size:22px; color:var(--ember);}
-  .stat-lbl{font-size:11px; color:var(--steel); text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;}
-
-  button.action{
-    width:100%; padding:14px; border-radius:12px; border:none;
-    background:var(--ember); color:#0B0B0D; font-weight:700; font-family:'Oswald';
-    text-transform:uppercase; letter-spacing:0.04em; font-size:14px; cursor:pointer; margin-top:6px;
-  }
-  button.action:active{transform:scale(0.98);}
-  button.ghost{
-    width:100%; padding:12px; border-radius:12px; border:1px solid var(--line);
-    background:transparent; color:var(--steel-light); font-weight:600; font-size:13px; cursor:pointer; margin-top:10px;
-  }
-
-  ::-webkit-scrollbar{display:none;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Forge V2 - Calisthenics & Strength</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #f97316;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 { text-align: center; color: var(--accent); margin-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 0.9em; margin-bottom: 25px; }
+        .day-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .day-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--accent);
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .exercise {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #334155;
+        }
+        .exercise:last-child { border-bottom: none; }
+        .ex-info { flex-grow: 1; }
+        .ex-name { font-weight: 600; display: block; }
+        .ex-tag {
+            display: inline-block;
+            font-size: 0.75em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #334155;
+            color: var(--accent);
+            margin-top: 4px;
+        }
+        .ex-sets { font-size: 0.9em; color: var(--text-muted); }
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>LA FORGE V2</h1>
+        <div class="subtitle">Programme Spécial Figures, Abdos & Avant-bras</div>
 
-<header>
-  <div class="brand">
-    <div class="brand-mark">LF</div>
-    <h1>La Forge</h1>
-  </div>
-  <div class="streak">🔥 <b id="streakVal">0</b> jours</div>
-</header>
-
-<main>
-
-  <!-- DASHBOARD -->
-  <div class="view active" id="view-dash">
-    <div class="gauge-card">
-      <div class="gauge-top">
-        <span class="gauge-label">Température de la semaine</span>
-        <span class="gauge-value" id="weekPct">0%</span>
-      </div>
-      <div class="gauge-track"><div class="gauge-fill" id="weekFill" style="width:0%"></div></div>
-      <div class="gauge-sub" id="weekSub">0 / 4 séances cette semaine</div>
-    </div>
-
-    <div class="stat-grid">
-      <div class="stat"><div class="stat-num" id="totalSessions">0</div><div class="stat-lbl">Séances totales</div></div>
-      <div class="stat"><div class="stat-num" id="totalSets">0</div><div class="stat-lbl">Séries validées</div></div>
-    </div>
-
-    <div class="block">
-      <div class="block-title"><span>Historique récent</span><span class="line"></span></div>
-      <div id="recentLog"></div>
-    </div>
-  </div>
-
-  <!-- PROGRAMME -->
-  <div class="view" id="view-program">
-    <div class="tabs" id="dayTabs"></div>
-    <div class="day-title" id="dayTitle"></div>
-    <div id="exerciseList"></div>
-    <button class="action" id="finishBtn">Terminer la séance</button>
-  </div>
-
-  <!-- JOURNAL -->
-  <div class="view" id="view-log">
-    <div class="block-title"><span>Changelog du programme</span><span class="line"></span></div>
-    <div id="changelogList"></div>
-    <div class="block">
-      <div class="block-title"><span>Historique complet</span><span class="line"></span></div>
-      <div id="fullLog"></div>
-    </div>
-    <button class="ghost" id="resetBtn">Réinitialiser mes données</button>
-  </div>
-
-</main>
-
-<footer class="tabbar">
-  <button class="nav-btn active" data-view="dash"><span class="nav-dot"></span>Accueil</button>
-  <button class="nav-btn" data-view="program"><span class="nav-dot"></span>Séance</button>
-  <button class="nav-btn" data-view="log"><span class="nav-dot"></span>Journal</button>
-</footer>
-
-<script>
-/* ---------- Données du programme ---------- */
-const PROGRAM = {
-  push: {
-    label: "Push",
-    exercises: [
-      { name:"Pompes (sac lesté)", tag:"Poitrine / Triceps", sets:4, target:"10-12" , weighted:true},
-      { name:"Dips sur barres", tag:"Triceps / Poitrine", sets:4, target:"8-10", weighted:true },
-      { name:"Pike push-ups", tag:"Épaules", sets:3, target:"8-10" },
-      { name:"Extensions triceps au sol", tag:"Triceps", sets:3, target:"12-15" },
-    ]
-  },
-  pull: {
-    label: "Pull",
-    exercises: [
-      { name:"Tractions pronation", tag:"Dos / Biceps", sets:4, target:"6-8", weighted:true },
-      { name:"Tractions supination", tag:"Biceps / Dos", sets:3, target:"6-8" },
-      { name:"Rowing australien", tag:"Dos", sets:3, target:"10-12" },
-      { name:"Dead hangs", tag:"Avant-bras / Grip", sets:3, target:"30-45s" },
-      { name:"Curl isométrique barre", tag:"Avant-bras", sets:2, target:"20s" },
-    ]
-  },
-  legs: {
-    label: "Legs",
-    exercises: [
-      { name:"Squats bulgares", tag:"Quadriceps / Fessiers", sets:4, target:"10-12" },
-      { name:"Pistol squats (assistés)", tag:"Unilatéral / Équilibre", sets:3, target:"5-6" },
-      { name:"Fentes marchées", tag:"Jambes complet", sets:3, target:"12-14" },
-      { name:"Mollets debout", tag:"Mollets", sets:4, target:"15-20" },
-    ]
-  },
-  full: {
-    label: "Full Body",
-    exercises: [
-      { name:"Burpees", tag:"Cardio / Full body", sets:3, target:"10-12" },
-      { name:"Tractions + Dips (superset)", tag:"Haut du corps", sets:3, target:"max" },
-      { name:"Pistol squats", tag:"Bas du corps", sets:3, target:"5-6" },
-      { name:"Planche + rotations", tag:"Gainage", sets:3, target:"40s" },
-    ]
-  }
-};
-
-const CHANGELOG = [
-  { ver:"v1.3", date:"Récent", note:"Recalibrage des cibles de répétitions (~80% du max réel), progression hebdomadaire" },
-  { ver:"v1.2", date:"Récent", note:"Ajout des exercices d'avant-bras (dead hangs, curl isométrique)" },
-  { ver:"v1.1", date:"Récent", note:"Intégration des mouvements unilatéraux — pistol squats, dead hangs" },
-  { ver:"v1.0", date:"Initial", note:"Split 4 jours Push/Pull/Legs/Full Body avec sac lesté" },
-];
-
-/* ---------- Stockage ---------- */
-const STORE_KEY = "laforge_data_v1";
-function loadData(){
-  try{
-    const raw = localStorage.getItem(STORE_KEY);
-    if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return { sessions: [], setLog: {} };
-}
-function saveData(){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
-
-let data = loadData();
-let currentDay = "push";
-let currentSetState = {}; // {exerciseIndex: [bool,...]}
-
-/* ---------- Navigation ---------- */
-document.querySelectorAll(".nav-btn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".nav-btn").forEach(b=>b.classList.remove("active"));
-    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-    btn.classList.add("active");
-    document.getElementById("view-"+btn.dataset.view).classList.add("active");
-    if(btn.dataset.view==="dash") renderDash();
-    if(btn.dataset.view==="log") renderLog();
-  });
-});
-
-/* ---------- Rendu du programme ---------- */
-function renderTabs(){
-  const tabsEl = document.getElementById("dayTabs");
-  tabsEl.innerHTML = "";
-  Object.keys(PROGRAM).forEach(key=>{
-    const b = document.createElement("button");
-    b.className = "tab" + (key===currentDay ? " active" : "");
-    b.textContent = PROGRAM[key].label;
-    b.addEventListener("click", ()=>{ currentDay = key; currentSetState = {}; renderProgram(); });
-    tabsEl.appendChild(b);
-  });
-}
-
-function renderProgram(){
-  renderTabs();
-  const day = PROGRAM[currentDay];
-  document.getElementById("dayTitle").textContent = day.label + " — " + day.exercises.length + " exercices";
-  const list = document.getElementById("exerciseList");
-  list.innerHTML = "";
-  day.exercises.forEach((ex, i)=>{
-    if(!currentSetState[i]) currentSetState[i] = new Array(ex.sets).fill(false);
-    const card = document.createElement("div");
-    card.className = "exercise";
-    card.innerHTML = `
-      <div class="ex-head">
-        <div>
-          <div class="ex-name">${ex.name}</div>
-          <div class="ex-tag">${ex.tag}</div>
+        <!-- Jour 1 -->
+        <div class="day-card">
+            <div class="day-title">Jour 1 : Pull, Grip & Progression Muscle-Up / Front Lever</div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Tractions Explosives (Cible torse)</span>
+                    <span class="ex-tag">Figures / Puissance</span>
+                </div>
+                <span class="ex-sets">4 x 5-8 reps</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Tuck Front Lever Hold</span>
+                    <span class="ex-tag">Figure (Dos / Core)</span>
+                </div>
+                <span class="ex-sets">4 x 10-15 sec</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Dead Hang à une main (ou 2 mains actives)</span>
+                    <span class="ex-tag">Avant-bras / Poigne</span>
+                </div>
+                <span class="ex-sets">3 x 30-45 sec</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Flexions de poignets suspendu à la barre</span>
+                    <span class="ex-tag">Avant-bras / Isolation</span>
+                </div>
+                <span class="ex-sets">3 x 15 reps</span>
+            </div>
         </div>
-        <div class="ex-target mono">${ex.target}</div>
-      </div>
-      <div class="sets" data-ex="${i}"></div>
-      ${ex.weighted ? '<div class="weighted">⚠ Sac lesté</div>' : ''}
-    `;
-    const setsEl = card.querySelector(".sets");
-    for(let s=0; s<ex.sets; s++){
-      const btn = document.createElement("button");
-      btn.className = "set-btn" + (currentSetState[i][s] ? " done" : "");
-      btn.textContent = s+1;
-      btn.addEventListener("click", ()=>{
-        currentSetState[i][s] = !currentSetState[i][s];
-        btn.classList.toggle("done");
-      });
-      setsEl.appendChild(btn);
-    }
-    list.appendChild(card);
-  });
-}
 
-document.getElementById("finishBtn").addEventListener("click", ()=>{
-  let totalSets = 0;
-  Object.values(currentSetState).forEach(arr=> totalSets += arr.filter(Boolean).length);
-  if(totalSets===0){
-    alert("Valide au moins une série avant de terminer la séance.");
-    return;
-  }
-  const session = {
-    day: currentDay,
-    label: PROGRAM[currentDay].label,
-    date: new Date().toISOString(),
-    setsCompleted: totalSets
-  };
-  data.sessions.push(session);
-  saveData();
-  currentSetState = {};
-  renderProgram();
-  document.querySelector('.nav-btn[data-view="dash"]').click();
-});
+        <!-- Jour 2 -->
+        <div class="day-card">
+            <div class="day-title">Jour 2 : Push, Épaules & Progression Handstand / L-Sit</div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Pike Push-ups (ou Handstand Hold au mur)</span>
+                    <span class="ex-tag">Figure (Handstand)</span>
+                </div>
+                <span class="ex-sets">4 x 8-12 reps</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Pseudo Planche Lean & Push-ups</span>
+                    <span class="ex-tag">Figure (Planche)</span>
+                </div>
+                <span class="ex-sets">4 x 8-10 reps</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">L-Sit Hold (au sol ou aux parallèles)</span>
+                    <span class="ex-tag">Abdos / Isométrie</span>
+                </div>
+                <span class="ex-sets">4 x 10-20 sec</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Extension des poignets au sol (Pompes sur les doigts/poignets)</span>
+                    <span class="ex-tag">Avant-bras / Renforcement</span>
+                </div>
+                <span class="ex-sets">3 x 12 reps</span>
+            </div>
+        </div>
 
-/* ---------- Dashboard ---------- */
-function startOfWeek(d){
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = (day===0 ? -6 : 1) - day;
-  date.setDate(date.getDate()+diff);
-  date.setHours(0,0,0,0);
-  return date;
-}
-
-function renderDash(){
-  const now = new Date();
-  const weekStart = startOfWeek(now);
-  const thisWeek = data.sessions.filter(s=> new Date(s.date) >= weekStart);
-  const pct = Math.min(100, Math.round((thisWeek.length/4)*100));
-  document.getElementById("weekPct").textContent = pct+"%";
-  document.getElementById("weekFill").style.width = pct+"%";
-  document.getElementById("weekSub").textContent = thisWeek.length+" / 4 séances cette semaine";
-
-  document.getElementById("totalSessions").textContent = data.sessions.length;
-  const totalSets = data.sessions.reduce((acc,s)=> acc + (s.setsCompleted||0), 0);
-  document.getElementById("totalSets").textContent = totalSets;
-
-  // streak: jours consécutifs (calendaires) avec au moins une séance
-  let streak = 0;
-  let cursor = new Date(); cursor.setHours(0,0,0,0);
-  const sessionDays = new Set(data.sessions.map(s=>{
-    const d = new Date(s.date); d.setHours(0,0,0,0); return d.getTime();
-  }));
-  while(sessionDays.has(cursor.getTime())){
-    streak++;
-    cursor.setDate(cursor.getDate()-1);
-  }
-  document.getElementById("streakVal").textContent = streak;
-
-  const recent = document.getElementById("recentLog");
-  const last5 = [...data.sessions].reverse().slice(0,5);
-  if(last5.length===0){
-    recent.innerHTML = '<div class="empty">Aucune séance enregistrée. Lance-toi 🔥</div>';
-  } else {
-    recent.innerHTML = last5.map(s=>{
-      const d = new Date(s.date);
-      const dateStr = d.toLocaleDateString('fr-FR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
-      return `<div class="log-item"><span>${s.label}</span><span class="log-date mono">${dateStr} · ${s.setsCompleted} séries</span></div>`;
-    }).join("");
-  }
-}
-
-/* ---------- Journal ---------- */
-function renderLog(){
-  document.getElementById("changelogList").innerHTML = CHANGELOG.map(c=>`
-    <div class="log-item">
-      <span>${c.note}</span>
-      <span class="log-ver">${c.ver}</span>
+        <!-- Jour 3 -->
+        <div class="day-card">
+            <div class="day-title">Jour 3 : Spécifique Core (Abdos) & Endurance Avant-bras</div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Toes-to-Bar (ou Relevés de genoux suspendu)</span>
+                    <span class="ex-tag">Abdos Dynamiques</span>
+                </div>
+                <span class="ex-sets">4 x 10-12 reps</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Hollow Body Hold</span>
+                    <span class="ex-tag">Gainage Profond</span>
+                </div>
+                <span class="ex-sets">4 x 45 sec</span>
+            </div>
+            <div class="exercise">
+                <div class="ex-info">
+                    <span class="ex-name">Suspension serviette/corde (Towel Hang)</span>
+                    <span class="ex-tag">Avant-bras (Force Pure)</span>
+                </div>
+                <span class="ex-sets">3 x Max de temps</span>
+            </div>
+        </div>
     </div>
-  `).join("");
-
-  const full = document.getElementById("fullLog");
-  if(data.sessions.length===0){
-    full.innerHTML = '<div class="empty">Rien pour l’instant.</div>';
-  } else {
-    full.innerHTML = [...data.sessions].reverse().map(s=>{
-      const d = new Date(s.date);
-      const dateStr = d.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
-      return `<div class="log-item"><span>${s.label} — ${dateStr}</span><span class="log-date mono">${s.setsCompleted} séries</span></div>`;
-    }).join("");
-  }
-}
-
-document.getElementById("resetBtn").addEventListener("click", ()=>{
-  if(confirm("Supprimer tout ton historique de séances ? Cette action est irréversible.")){
-    data = { sessions: [], setLog: {} };
-    saveData();
-    renderDash();
-    renderLog();
-  }
-});
-
-/* ---------- Init ---------- */
-renderProgram();
-renderDash();
-
-/* ---------- Service worker ---------- */
-if('serviceWorker' in navigator){
-  window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  });
-}
-</script>
 </body>
 </html>
