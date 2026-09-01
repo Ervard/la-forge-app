@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -474,4 +474,56 @@ function renderDash(){
   const recent = document.getElementById("recentLog");
   const last5 = [...data.sessions].reverse().slice(0,5);
   if(last5.length===0){
-    recent.innerHTML = '<div class="empty">Aucune séance enregistrée. Lance-toi 🔥<
+    recent.innerHTML = '<div class="empty">Aucune séance enregistrée. Lance-toi 🔥</div>';
+  } else {
+    recent.innerHTML = last5.map(s=>{
+      const d = new Date(s.date);
+      const dateStr = d.toLocaleDateString('fr-FR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+      return `<div class="log-item"><span>${s.label}</span><span class="log-date mono">${dateStr} · ${s.setsCompleted} séries</span></div>`;
+    }).join("");
+  }
+}
+
+/* ---------- Journal ---------- */
+function renderLog(){
+  document.getElementById("changelogList").innerHTML = CHANGELOG.map(c=>`
+    <div class="log-item">
+      <span>${c.note}</span>
+      <span class="log-ver">${c.ver}</span>
+    </div>
+  `).join("");
+
+  const full = document.getElementById("fullLog");
+  if(data.sessions.length===0){
+    full.innerHTML = '<div class="empty">Rien pour l’instant.</div>';
+  } else {
+    full.innerHTML = [...data.sessions].reverse().map(s=>{
+      const d = new Date(s.date);
+      const dateStr = d.toLocaleDateString('fr-FR', {weekday:'short', day:'numeric', month:'short', year:'numeric'});
+      return `<div class="log-item"><span>${s.label} — ${dateStr}</span><span class="log-date mono">${s.setsCompleted} séries</span></div>`;
+    }).join("");
+  }
+}
+
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  if(confirm("Supprimer tout ton historique de séances ? Cette action est irréversible.")){
+    data = { sessions: [], setLog: {} };
+    saveData();
+    renderDash();
+    renderLog();
+  }
+});
+
+/* ---------- Init ---------- */
+renderProgram();
+renderDash();
+
+/* ---------- Service worker ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
