@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0B0B0D">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -151,10 +151,11 @@
   .view{display:none;} 
   .view.active{display:block;} 
 
-  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;} 
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;} 
   .stat{background:var(--bg-card); border:1px solid var(--line); border-radius:var(--radius); padding:14px;} 
   .stat-num{font-family:'JetBrains Mono'; font-weight:700; font-size:22px; color:var(--ember);} 
   .stat-lbl{font-size:11px; color:var(--steel); text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;} 
+  .sparkline{display:block;margin-top:8px;width:100%;height:28px}
 
   button.action{
     width:100%; padding:14px; border-radius:12px; border:none;
@@ -171,6 +172,14 @@
 
   .nutri-list{margin:0; padding-left:18px; font-size:13px; color:var(--steel-light); line-height:1.9;} 
   .nutri-list li{margin-bottom:2px;} 
+
+  .set-form{display:flex; gap:6px; align-items:center;}
+  .set-form input{width:64px; padding:6px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--text); font-family:'JetBrains Mono';}
+  .small-btn{padding:6px 8px; border-radius:8px; border:none; cursor:pointer; font-weight:700}
+  .small-btn.save{background:var(--ok); color:#07110A}
+  .small-btn.cancel{background:transparent; border:1px solid var(--line); color:var(--steel-light)}
+  .suggestion{font-size:12px;color:var(--ok);font-weight:700;margin-left:8px}
+  .apply-sugg{background:transparent;border:1px solid var(--ok);color:var(--ok);padding:4px 8px;border-radius:8px;margin-left:8px}
 </style>
 </head>
 <body>
@@ -193,12 +202,13 @@
         <span class="gauge-value" id="weekPct">0%</span>
       </div>
       <div class="gauge-track"><div class="gauge-fill" id="weekFill" style="width:0%"></div></div>
-      <div class="gauge-sub" id="weekSub">0 / 4 séances cette semaine</div>
+      <div class="gauge-sub" id="weekSub">0 / 5 séances cette semaine</div>
     </div>
 
     <div class="stat-grid">
       <div class="stat"><div class="stat-num" id="totalSessions">0</div><div class="stat-lbl">Séances totales</div></div>
       <div class="stat"><div class="stat-num" id="totalSets">0</div><div class="stat-lbl">Séries validées</div></div>
+      <div class="stat"><div class="stat-num" id="weeklyVolume">0</div><div class="stat-lbl">Volume (kg·rep)</div><canvas id="volumeSpark" class="sparkline" width="160" height="28"></canvas></div>
     </div>
 
     <div class="block">
@@ -258,6 +268,17 @@
       <div class="block-title"><span>Historique complet</span><span class="line"></span></div>
       <div id="fullLog"></div>
     </div>
+    <div class="block">
+      <div class="block-title"><span>Poids corporel (hebdomadaire)</span><span class="line"></span></div>
+      <div class="exercise">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input id="weightInput" type="number" placeholder="Poids kg" style="padding:8px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--text);width:120px">
+          <button class="small-btn save" id="addWeightBtn">Ajouter</button>
+          <button class="small-btn" id="exportCsvBtn">Exporter CSV</button>
+        </div>
+        <div id="weightHistory" style="margin-top:10px;font-size:13px;color:var(--steel);"></div>
+      </div>
+    </div>
     <button class="ghost" id="resetBtn">Réinitialiser mes données</button>
   </div>
 
@@ -271,63 +292,58 @@
 </footer>
 
 <script>
-/* ---------- Données du programme ---------- */
+/* ---------- Config ---------- */
+const WEEKLY_TARGET = 5; // nombre de séances visé par semaine
+
+/* ---------- Données du programme (5x split + forearms rotation Option A) ---------- */
 const PROGRAM = {
   push: {
-    label: "Push",
+    label: "Push 1",
     exercises: [
-      { name:"Pompes (sac lesté)", tag:"Poitrine / Triceps", sets:4, target:"10-12" , weighted:true},
-      { name:"Dips sur barres", tag:"Triceps / Poitrine", sets:4, target:"8-10", weighted:true },
-      { name:"Pike push-ups", tag:"Épaules", sets:3, target:"8-10" },
-      { name:"Extensions triceps au sol", tag:"Triceps", sets:3, target:"12-15" },
-      { name:"Hollow body hold", tag:"Finisher — Abdos", sets:3, target:"20-30s" },
+      { name:"Pompes (sac lesté)", tag:"Poitrine / Triceps", sets:4, target:"6-10", weighted:true},
+      { name:"Dips sur barres", tag:"Triceps / Poitrine", sets:4, target:"6-10", weighted:true },
+      { name:"Pike push-ups", tag:"Épaules", sets:3, target:"8-12" },
+      { name:"Extensions triceps au sol", tag:"Triceps", sets:3, target:"10-15" },
+      { name:"Farmer carry", tag:"Avant-bras / Grip", sets:3, target:"30-40m", weighted:true, forearm:true }
     ]
   },
   pull: {
-    label: "Pull",
+    label: "Pull 1",
     exercises: [
       { name:"Tractions pronation", tag:"Dos / Biceps", sets:4, target:"6-8", weighted:true },
+      { name:"Rowing australien", tag:"Dos", sets:4, target:"8-12" },
       { name:"Tractions supination", tag:"Biceps / Dos", sets:3, target:"6-8" },
-      { name:"Rowing australien", tag:"Dos", sets:3, target:"10-12" },
-      { name:"Dead hangs", tag:"Avant-bras / Grip", sets:3, target:"30-45s" },
-      { name:"Curl isométrique barre", tag:"Avant-bras", sets:2, target:"20s" },
+      { name:"Dead hangs", tag:"Avant-bras / Grip", sets:3, target:"30-60s", forearm:true },
       { name:"Tuck front lever hold", tag:"Figure — Front Lever", sets:3, target:"10-15s" },
     ]
   },
   legs: {
-    label: "Legs",
+    label: "Jambes",
     exercises: [
-      { name:"Squats bulgares", tag:"Quadriceps / Fessiers", sets:4, target:"10-12" },
+      { name:"Squats bulgares", tag:"Quadriceps / Fessiers", sets:4, target:"8-12" },
       { name:"Pistol squats (assistés)", tag:"Unilatéral / Équilibre", sets:3, target:"5-6" },
-      { name:"Fentes marchées", tag:"Jambes complet", sets:3, target:"12-14" },
-      { name:"Mollets debout", tag:"Mollets", sets:4, target:"15-20" },
-      { name:"Leg raises", tag:"Finisher — Abdos", sets:3, target:"12-15" },
+      { name:"Fentes marchées", tag:"Jambes complet", sets:3, target:"10-14" },
+      { name:"Soulevé jambe semi-tendue", tag:"Ischio / Fessiers", sets:3, target:"8-12" },
+      { name:"Wrist curls", tag:"Avant-bras", sets:3, target:"12-20", forearm:true }
     ]
   },
-  full: {
-    label: "Full Body",
+  push2: {
+    label: "Push 2",
     exercises: [
-      { name:"Burpees", tag:"Cardio / Full body", sets:3, target:"10-12" },
-      { name:"Tractions + Dips (superset)", tag:"Haut du corps", sets:3, target:"max" },
-      { name:"Pistol squats", tag:"Bas du corps", sets:3, target:"5-6" },
-      { name:"Planche + rotations", tag:"Gainage", sets:3, target:"40s" },
+      { name:"Pompes inclinées / main rapprochée", tag:"Poitrine / Triceps", sets:3, target:"8-12" },
+      { name:"Dips assistés / pause", tag:"Triceps", sets:3, target:"6-10" },
+      { name:"Élévations latérales / préhab", tag:"Épaules", sets:3, target:"10-15" },
+      { name:"Wrist extensions", tag:"Avant-bras", sets:3, target:"12-20", forearm:true },
+      { name:"Core work", tag:"Abdos", sets:3, target:"30-60s" }
     ]
   },
-  core: {
-    label: "Abdos & Figures",
+  pull2: {
+    label: "Pull 2",
     exercises: [
-      { name:"Hollow body hold", tag:"Abdos", sets:3, target:"20-30s" },
-      { name:"Leg raises", tag:"Abdos", sets:3, target:"12-15" },
-      { name:"Russian twists", tag:"Abdos", sets:3, target:"20 (10/côté)", weighted:true },
-      { name:"V-ups", tag:"Abdos", sets:3, target:"10-12" },
-      { name:"Dead hang prise fine", tag:"Avant-bras / Grip", sets:3, target:"max" },
-      { name:"Wrist curls", tag:"Avant-bras", sets:3, target:"15-20", weighted:true },
-      { name:"Wrist extensions", tag:"Avant-bras", sets:3, target:"15-20", weighted:true },
-      { name:"Farmer carry", tag:"Avant-bras / Grip", sets:3, target:"30-40m", weighted:true },
-      { name:"Tuck planche hold", tag:"Figure — Planche", sets:3, target:"8-12s" },
-      { name:"Tuck front lever hold", tag:"Figure — Front Lever", sets:3, target:"10-15s" },
-      { name:"Tuck flag", tag:"Figure — Drapeau", sets:3, target:"8-10s" },
-      { name:"Tuck L-sit", tag:"Figure — L-sit", sets:3, target:"10-15s" },
+      { name:"Rows unilatéraux / anneaux", tag:"Dos", sets:3, target:"8-12" },
+      { name:"Curl isométrique barre", tag:"Avant-bras", sets:3, target:"20s", forearm:true },
+      { name:"Farmer carry (léger)", tag:"Grip / Conditionnement", sets:3, target:"20-30m", weighted:true },
+      { name:"Face pulls / posture", tag:"Épaules / Dos", sets:3, target:"12-15" }
     ]
   }
 };
@@ -346,14 +362,14 @@ function loadData(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if(raw) return JSON.parse(raw);
-  }catch(e){}
-  return { sessions: [], setLog: {} };
+  }catch(e){ }
+  return { sessions: [], setLog: {}, weights: [], progressions: [] };
 }
 function saveData(){ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }
 
 let data = loadData();
-let currentDay = "push";
-let currentSetState = {}; // {exerciseIndex: [bool,...]}
+let currentDay = "push"; // default
+let currentSetState = {}; // {exerciseIndex: [{done:false,reps:null,weight:null,rpe:null}, ...]}
 
 /* ---------- Navigation ---------- */
 document.querySelectorAll(".nav-btn").forEach(btn=>{
@@ -366,6 +382,61 @@ document.querySelectorAll(".nav-btn").forEach(btn=>{
     if(btn.dataset.view==="log") renderLog();
   });
 });
+
+/* ---------- Helpers ---------- */
+function persistSetState(){
+  data.setLog = data.setLog || {};
+  data.setLog[currentDay] = currentSetState;
+  saveData();
+}
+
+function parseTargetMax(target){
+  // target could be "6-10", "30-60s", "max", "10-12"
+  if(!target) return null;
+  const m = target.match(/(\d+)(?:\s*-\s*(\d+))?/);
+  if(!m) return null;
+  if(m[2]) return parseInt(m[2],10);
+  return parseInt(m[1],10);
+}
+
+function lastNSessionsForDay(dayKey, n=2){
+  const arr = data.sessions.filter(s=> s.day===dayKey).slice().reverse();
+  return arr.slice(0,n);
+}
+
+function computeSuggestionForExercise(dayKey, exIndex){
+  const ex = PROGRAM[dayKey].exercises[exIndex];
+  const targetMax = parseTargetMax(ex.target);
+  if(!targetMax) return null; // can't compute
+  const last = lastNSessionsForDay(dayKey,2);
+  if(last.length<2) return null;
+  // check both sessions: all sets for this ex exist and meet condition
+  let meets = true;
+  let avgRpe = 0; let rpeCount = 0;
+  for(const s of last){
+    const details = s.setDetails && s.setDetails[exIndex];
+    if(!details) { meets = false; break; }
+    // details is array of sets
+    const allSetsOk = details.every(dt => {
+      if(!dt || !dt.reps) return false;
+      return dt.reps >= targetMax;
+    });
+    if(!allSetsOk){ meets = false; break; }
+    details.forEach(dt=>{ if(dt && dt.rpe) { avgRpe += dt.rpe; rpeCount++; } });
+  }
+  if(!meets) return null;
+  const avgRpeVal = rpeCount? (avgRpe / rpeCount) : null;
+  if(avgRpeVal && avgRpeVal>7) return null; // too hard
+  // suggest increase
+  if(ex.weighted) return {type:'weight', delta: (dayKey==='legs'? 5:2.5)};
+  return {type:'difficulty', note:'Réduire l’assistance ou augmenter la difficulté (variation)'};
+}
+
+function recordProgressionSuggestion(dayKey, exIndex, suggestion){
+  data.progressions = data.progressions || [];
+  data.progressions.push({date:new Date().toISOString(), day:dayKey, exIndex, suggestion});
+  saveData();
+}
 
 /* ---------- Rendu du programme ---------- */
 function renderTabs(){
@@ -380,20 +451,35 @@ function renderTabs(){
   });
 }
 
+function ensureSetStateForExercise(i, ex){
+  if(!currentSetState[i]){
+    currentSetState[i] = [];
+    for(let s=0;s<ex.sets;s++) currentSetState[i].push({done:false,reps:null,weight:null,rpe:null});
+  }
+}
+
 function renderProgram(){
   renderTabs();
   const day = PROGRAM[currentDay];
   document.getElementById("dayTitle").textContent = day.label + " — " + day.exercises.length + " exercices";
   const list = document.getElementById("exerciseList");
   list.innerHTML = "";
+
+  // load draft if exists
+  if(data.setLog && data.setLog[currentDay]) currentSetState = data.setLog[currentDay];
+
   day.exercises.forEach((ex, i)=>{
-    if(!currentSetState[i]) currentSetState[i] = new Array(ex.sets).fill(false);
+    ensureSetStateForExercise(i, ex);
     const card = document.createElement("div");
     card.className = "exercise";
+    // suggestion
+    const sugg = computeSuggestionForExercise(currentDay, i);
+    const suggHtml = sugg ? `<span class="suggestion">Suggestion: ${sugg.type==='weight' ? '+'+sugg.delta+'kg' : sugg.note}</span>` : '';
+
     card.innerHTML = `
       <div class="ex-head">
         <div>
-          <div class="ex-name">${ex.name}</div>
+          <div style="display:flex;align-items:center;"><div class="ex-name">${ex.name}</div>${suggHtml}</div>
           <div class="ex-tag">${ex.tag}</div>
         </div>
         <div class="ex-target mono">${ex.target}</div>
@@ -403,33 +489,82 @@ function renderProgram(){
     `;
     const setsEl = card.querySelector(".sets");
     for(let s=0; s<ex.sets; s++){
+      const state = currentSetState[i][s];
       const btn = document.createElement("button");
-      btn.className = "set-btn" + (currentSetState[i][s] ? " done" : "");
-      btn.textContent = s+1;
+      btn.className = "set-btn" + (state && state.done ? " done" : "");
+      btn.textContent = (state && state.reps) ? `${state.reps}${state.weight?"kg":""}` : (s+1);
       btn.addEventListener("click", ()=>{
-        currentSetState[i][s] = !currentSetState[i][s];
-        btn.classList.toggle("done");
+        openSetEditor(setsEl, i, s, ex);
       });
       setsEl.appendChild(btn);
     }
+    // if suggestion exists, add apply button
+    if(sugg){
+      const btnApply = document.createElement('button');
+      btnApply.className = 'apply-sugg';
+      btnApply.textContent = sugg.type==='weight' ? `Appliquer +${sugg.delta}kg` : 'Appliquer suggestion';
+      btnApply.addEventListener('click', ()=>{
+        recordProgressionSuggestion(currentDay, i, sugg);
+        alert('Suggestion appliquée et enregistrée dans lhistorique de progression.');
+        renderProgram();
+      });
+      card.querySelector('.ex-head').appendChild(btnApply);
+    }
+
     list.appendChild(card);
   });
 }
 
+function openSetEditor(container, exIndex, setIndex, ex){
+  // remove existing editor if any
+  const existing = container.querySelector('.set-form');
+  if(existing) existing.remove();
+
+  const form = document.createElement('div');
+  form.className = 'set-form';
+  form.innerHTML = `
+    <input type="number" step="1" min="0" placeholder="reps" id="inp-reps" aria-label="Reps" />
+    <input type="number" step="0.5" min="0" placeholder="kg" id="inp-kg" aria-label="Poids kg" />
+    <input type="number" step="0.5" min="0" max="10" placeholder="RPE" id="inp-rpe" aria-label="RPE" />
+    <button class="small-btn save" id="saveSet">OK</button>
+    <button class="small-btn cancel" id="cancelSet">X</button>
+  `;
+  container.appendChild(form);
+
+  const state = currentSetState[exIndex][setIndex] || {done:false,reps:null,weight:null,rpe:null};
+  form.querySelector('#inp-reps').value = state.reps || '';
+  form.querySelector('#inp-kg').value = state.weight || '';
+  form.querySelector('#inp-rpe').value = state.rpe || '';
+
+  form.querySelector('#saveSet').addEventListener('click', ()=>{
+    const r = parseInt(form.querySelector('#inp-reps').value) || null;
+    const w = parseFloat(form.querySelector('#inp-kg').value) || null;
+    const rpe = parseFloat(form.querySelector('#inp-rpe').value) || null;
+    const done = !!r || !!w || !!rpe;
+    currentSetState[exIndex][setIndex] = {done, reps:r, weight:w, rpe:rpe};
+    persistSetState();
+    renderProgram();
+  });
+  form.querySelector('#cancelSet').addEventListener('click', ()=>{ form.remove(); });
+}
+
 document.getElementById("finishBtn").addEventListener("click", ()=>{
   let totalSets = 0;
-  Object.values(currentSetState).forEach(arr=> totalSets += arr.filter(Boolean).length);
+  Object.values(currentSetState).forEach(arr=> totalSets += arr.filter(s=>s && s.done).length);
   if(totalSets===0){
-    alert("Valide au moins une série avant de terminer la séance.");
+    alert("Valide au moins une série (indique reps/poids ou coche) avant de terminer la séance.");
     return;
   }
   const session = {
     day: currentDay,
     label: PROGRAM[currentDay].label,
     date: new Date().toISOString(),
-    setsCompleted: totalSets
+    setsCompleted: totalSets,
+    setDetails: JSON.parse(JSON.stringify(currentSetState))
   };
   data.sessions.push(session);
+  // clear draft for this day
+  if(data.setLog) delete data.setLog[currentDay];
   saveData();
   currentSetState = {};
   renderProgram();
@@ -439,25 +574,109 @@ document.getElementById("finishBtn").addEventListener("click", ()=>{
 /* ---------- Dashboard ---------- */
 function startOfWeek(d){
   const date = new Date(d);
-  const day = date.getDay();
-  const diff = (day===0 ? -6 : 1) - day;
-  date.setDate(date.getDate()+diff);
+  const day = (date.getDay() + 6) % 7; // 0 = Monday
+  date.setDate(date.getDate() - day);
   date.setHours(0,0,0,0);
   return date;
+}
+
+// compute weekly volume (sum reps * weight) for the current week
+function computeWeeklyVolume(){
+  const now = new Date();
+  const weekStart = startOfWeek(now);
+  let total = 0;
+  data.sessions.forEach(s => {
+    const sd = new Date(s.date);
+    if(sd >= weekStart){
+      if(s.setDetails){
+        s.setDetails.forEach(exArr => {
+          if(!exArr) return;
+          exArr.forEach(set => {
+            if(set && set.reps && set.weight){
+              total += (set.reps * set.weight);
+            }
+          });
+        });
+      }
+    }
+  });
+  return Math.round(total);
+}
+
+// compute volumes for past `weeks` weeks (last element = current week) for sparkline
+function computeVolumesByWeek(weeks = 8){
+  const results = new Array(weeks).fill(0);
+  const now = new Date();
+  // for each session, determine week index
+  data.sessions.forEach(s => {
+    const sd = new Date(s.date);
+    // compute weeks difference between session week start and current week start
+    const currentWeekStart = startOfWeek(now);
+    const sWeekStart = startOfWeek(sd);
+    const diffDays = Math.round((currentWeekStart - sWeekStart) / (1000*60*60*24));
+    const weekIndex = Math.floor(diffDays / 7);
+    // weekIndex 0 => current week, 1 => previous week, etc.
+    if(weekIndex >= 0 && weekIndex < weeks){
+      // accumulate volume for that session
+      let sessionVol = 0;
+      if(s.setDetails){
+        s.setDetails.forEach(exArr => {
+          if(!exArr) return;
+          exArr.forEach(set => {
+            if(set && set.reps && set.weight){ sessionVol += (set.reps * set.weight); }
+          });
+        });
+      }
+      // add to appropriate bucket (reverse order so last element is current week)
+      results[weeks - 1 - weekIndex] += sessionVol;
+    }
+  });
+  return results;
+}
+
+function drawSparkline(canvasId, dataPoints){
+  const c = document.getElementById(canvasId);
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const w = c.width; const h = c.height;
+  ctx.clearRect(0,0,w,h);
+  if(!dataPoints || dataPoints.length===0){ return; }
+  const max = Math.max(...dataPoints, 1);
+  const min = Math.min(...dataPoints);
+  const len = dataPoints.length;
+  ctx.strokeStyle = 'rgba(61,220,132,0.95)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  dataPoints.forEach((v,i)=>{
+    const x = (i/(len-1||1)) * (w-4) + 2;
+    const norm = (v - min) / (max - min || 1);
+    const y = h - 2 - (norm * (h-6));
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // small area fill
+  ctx.fillStyle = 'rgba(61,220,132,0.08)';
+  ctx.lineTo(w-2,h-2); ctx.lineTo(2,h-2); ctx.closePath(); ctx.fill();
 }
 
 function renderDash(){
   const now = new Date();
   const weekStart = startOfWeek(now);
   const thisWeek = data.sessions.filter(s=> new Date(s.date) >= weekStart);
-  const pct = Math.min(100, Math.round((thisWeek.length/5)*100));
+  const pct = Math.min(100, Math.round((thisWeek.length/WEEKLY_TARGET)*100));
   document.getElementById("weekPct").textContent = pct+"%";
   document.getElementById("weekFill").style.width = pct+"%";
-  document.getElementById("weekSub").textContent = thisWeek.length+" / 5 séances cette semaine";
+  document.getElementById("weekSub").textContent = thisWeek.length+" / "+WEEKLY_TARGET+" séances cette semaine";
 
   document.getElementById("totalSessions").textContent = data.sessions.length;
   const totalSets = data.sessions.reduce((acc,s)=> acc + (s.setsCompleted||0), 0);
   document.getElementById("totalSets").textContent = totalSets;
+
+  // compute & render weekly volume
+  const vol = computeWeeklyVolume();
+  document.getElementById('weeklyVolume').textContent = vol;
+  const volumes = computeVolumesByWeek(8); // last 8 weeks
+  drawSparkline('volumeSpark', volumes);
 
   // streak: jours consécutifs (calendaires) avec au moins une séance
   let streak = 0;
@@ -503,11 +722,53 @@ function renderLog(){
       return `<div class="log-item"><span>${s.label} — ${dateStr}</span><span class="log-date mono">${s.setsCompleted} séries</span></div>`;
     }).join("");
   }
+
+  // weight history
+  const wh = document.getElementById('weightHistory');
+  if(!data.weights || data.weights.length===0){
+    wh.innerHTML = '<div class="empty">Aucun poids enregistré.</div>';
+  } else {
+    wh.innerHTML = data.weights.slice().reverse().map(w=>{
+      const d = new Date(w.date);
+      return `<div style="padding:6px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between"><span>${d.toLocaleDateString('fr-FR')}</span><span class="mono">${w.kg} kg</span></div>`;
+    }).join('');
+  }
 }
 
+document.getElementById("weightInput").addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('addWeightBtn').click(); });
+document.getElementById("addWeightBtn").addEventListener('click', ()=>{
+  const v = parseFloat(document.getElementById('weightInput').value);
+  if(!v || v<=20) { alert('Veuillez entrer un poids valide (kg).'); return; }
+  data.weights = data.weights || [];
+  data.weights.push({kg: v, date: new Date().toISOString()});
+  saveData();
+  document.getElementById('weightInput').value = '';
+  renderLog();
+});
+
+function exportCsv(){
+  // sessions and weights export
+  const rows = [];
+  rows.push(['type','date','day','label','setsCompleted','details']);
+  data.sessions.forEach(s=>{
+    rows.push(['session', s.date, s.day, s.label, s.setsCompleted, JSON.stringify(s.setDetails)]);
+  });
+  rows.push([]);
+  rows.push(['weights']);
+  rows.push(['date','kg']);
+  (data.weights||[]).forEach(w=> rows.push([w.date, w.kg]));
+  const csv = rows.map(r=> r.map(c=> '"'+String(c||'')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'laforge_export.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+document.getElementById('exportCsvBtn').addEventListener('click', exportCsv);
+
+/* ---------- Reset ---------- */
 document.getElementById("resetBtn").addEventListener("click", ()=>{
-  if(confirm("Supprimer tout ton historique de séances ? Cette action est irréversible.")){
-    data = { sessions: [], setLog: {} };
+  if(confirm("Supprimer tout ton historique de séances et poids ? Cette action est irréversible.")){
+    data = { sessions: [], setLog: {}, weights: [], progressions: [] };
     saveData();
     renderDash();
     renderLog();
